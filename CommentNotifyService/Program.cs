@@ -52,7 +52,7 @@ var rabbitHost = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
 var rabbitUser = builder.Configuration["RabbitMQ:Username"] ?? "guest";
 var rabbitPass = builder.Configuration["RabbitMQ:Password"] ?? "guest";
 
-builder.Services.AddMassTransit(x =>
+/*builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<TaskStatusChangedConsumer>();
     x.AddConsumer<TaskAssignedConsumer>();
@@ -67,7 +67,7 @@ builder.Services.AddMassTransit(x =>
 
         cfg.ConfigureEndpoints(context);
     });
-});
+});*/
 
 builder.Services.AddSwaggerGen(c =>
 {
