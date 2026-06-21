@@ -8,13 +8,18 @@ using TaskKanban.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Thêm dòng này để tự động bỏ qua vòng lặp liên kết thực thể dữ liệu
-        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-    }); ;
+        options.JsonSerializerOptions.ReferenceHandler =
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
+
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new()
@@ -26,7 +31,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddDbContext<TaskDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("TaskDB")));
+    options.UseInMemoryDatabase("TaskDb"));
 
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IKanbanService, KanbanService>();
@@ -34,13 +39,16 @@ builder.Services.AddScoped<ISubTaskService, SubTaskService>();
 builder.Services.AddScoped<ITimeLogService, TimeLogService>();
 builder.Services.AddScoped<ITaskEventPublisher, TaskEventPublisher>();
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "TaskKanbanService-Dev-Secret-Key-Min32Chars!";
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? "ProjectManagementSystem-JWT-Secret-Key-2024-Min32Chars!";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "ProjectManagementSystem";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "ProjectManagementSystem";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -58,25 +66,16 @@ builder.Services.AddAuthorization();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader());
 });
 
-var rabbitHost = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
-var rabbitUser = builder.Configuration["RabbitMQ:Username"] ?? "guest";
-var rabbitPass = builder.Configuration["RabbitMQ:Password"] ?? "guest";
-
+// Dùng MassTransit InMemory để không cần RabbitMQ thật trên Railway Free
 builder.Services.AddMassTransit(x =>
 {
-    
-
-    x.UsingRabbitMq((context, cfg) =>
+    x.UsingInMemory((context, cfg) =>
     {
-        cfg.Host(rabbitHost, "/", h =>
-        {
-            h.Username(rabbitUser);
-            h.Password(rabbitPass);
-        });
-
         cfg.ConfigureEndpoints(context);
     });
 });
@@ -86,17 +85,14 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<TaskDbContext>();
-    db.Database.Migrate();
+    db.Database.EnsureCreated();
 }
 
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Task & Kanban Service v1");
-    });
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Task & Kanban Service v1");
+});
 
 app.UseCors("AllowAll");
 
@@ -111,4 +107,4 @@ app.MapGet("/health", () => Results.Ok(new
 
 app.MapControllers();
 
-app.Run("http://0.0.0.0:5027");
+app.Run();
