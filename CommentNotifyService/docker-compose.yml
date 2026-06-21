@@ -1,0 +1,34 @@
+﻿services:
+  # 1. Dịch vụ Database SQL Server
+  notify-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: commentnotifyservice-notify-db-1
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong@Password2026
+    ports:
+      - "1433:1433"
+    networks:
+      - notify-network
+
+  # 2. Dịch vụ Backend API (.NET 9)
+  notify-service:
+    image: ://microsoft.com
+    container_name: commentnotifyservice-backend-1
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "7159:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=notify-db;Database=CommentNotifyDB;User Id=sa;Password=YourStrong@Password2026;TrustServerCertificate=True;
+    depends_on:
+      - notify-db
+    command: dotnet watch run --launch-profile http
+    networks:
+      - notify-network
+
+networks:
+  notify-network:
+    driver: bridge

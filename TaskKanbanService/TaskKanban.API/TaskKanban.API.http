@@ -1,0 +1,6 @@
+@TaskKanban.API_HostAddress = http://localhost:5027
+
+GET {{TaskKanban.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
