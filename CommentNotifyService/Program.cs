@@ -37,7 +37,7 @@ builder.Services.AddAuthentication(x =>
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseInMemoryDatabase("CommentNotifyDb"));
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -117,8 +117,8 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<AppDbContext>();
-        context.Database.Migrate();
-        Console.WriteLine("--- Đã tự động cập nhật Database thành công! ---");
+        context.Database.EnsureCreated();
+        Console.WriteLine("--- Đã khởi tạo InMemory Database thành công! ---");
 
         var admin = context.Users.FirstOrDefault(u => u.Username == "admin@gmail.com");
         if (admin == null)
@@ -144,7 +144,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Lỗi khi tự động cập nhật DB hoặc Seed dữ liệu: {ex.Message}");
+        Console.WriteLine($"Lỗi khi khởi tạo DB hoặc Seed dữ liệu: {ex.Message}");
     }
 }
 
